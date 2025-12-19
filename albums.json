@@ -1,8 +1,0 @@
-[
-  {"id":"a1","title":"Promises","artist":"Floating Points, Pharoah Sanders & the London Symphony Orchestra","genres":["ambient","jazz"],"year":2021},
-  {"id":"a2","title":"Vespertine","artist":"Björk","genres":["art pop","electronic"],"year":2001},
-  {"id":"a3","title":"In Rainbows","artist":"Radiohead","genres":["alternative","art rock"],"year":2007},
-  {"id":"a4","title":"A Seat at the Table","artist":"Solange","genres":["r&b","soul"],"year":2016},
-  {"id":"a5","title":"Selected Ambient Works 85–92","artist":"Aphex Twin","genres":["ambient","electronic"],"year":1992},
-  {"id":"a6","title":"Blue","artist":"Joni Mitchell","genres":["folk","singer-songwriter"],"year":1971}
-]
