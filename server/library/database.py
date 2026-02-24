@@ -19,6 +19,9 @@ class Database:
             ''')
             fields={r['name'] for r in db.execute('PRAGMA table_info(listens)')}
             if 'profile_id' not in fields: db.execute("ALTER TABLE listens ADD COLUMN profile_id TEXT NOT NULL DEFAULT 'local'")
+            queue_fields={r['name'] for r in db.execute('PRAGMA table_info(queue)')}
+            if 'position' not in queue_fields: db.execute('ALTER TABLE queue ADD COLUMN position INTEGER NOT NULL DEFAULT 0')
+            db.execute('CREATE INDEX IF NOT EXISTS queue_profile_position ON queue(profile_id,position)')
             db.execute('CREATE INDEX IF NOT EXISTS listens_profile_date ON listens(profile_id,listened_on)')
 
     @contextmanager
