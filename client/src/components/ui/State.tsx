@@ -1,0 +1,6 @@
+import type { ReactNode } from 'react';
+export function EmptyState({ title, children }: { title: string; children: ReactNode }) {
+  return <div className="rounded-2xl border border-dashed border-stone-300 bg-white/40 px-6 py-14 text-center"><div className="mb-3 text-3xl text-emerald-800" aria-hidden="true">◎</div><h2 className="font-display text-2xl text-stone-800">{title}</h2><div className="mx-auto mt-3 max-w-md text-sm leading-6 text-stone-500">{children}</div></div>;
+}
+export function SkeletonGrid() { return <div aria-label="Loading albums" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse rounded-2xl bg-white p-5"><div className="aspect-square rounded-xl bg-stone-200" /><div className="mt-4 h-5 w-3/4 rounded bg-stone-200" /><div className="mt-3 h-3 w-1/2 rounded bg-stone-100" /></div>)}</div>; }
+export function SectionTitle({ eyebrow, title, children }: { eyebrow: string; title: string; children?: ReactNode }) { return <div className="mb-7"><p className="eyebrow">{eyebrow}</p><h1 className="mt-2 font-display text-4xl tracking-tight text-stone-900">{title}</h1>{children && <div className="mt-3 max-w-2xl text-sm leading-6 text-stone-500">{children}</div>}</div>; }
