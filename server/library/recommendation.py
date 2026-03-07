@@ -8,7 +8,7 @@ class Recommender:
     version='content-diversity-v1'
     def __init__(self,catalog): self.catalog=catalog
 
-    def rank(self,listens,limit=10,day=None):
+    def rank(self,listens,limit=10,day=None,excluded=None):
         day=day or date.today()
         taste=defaultdict(float)
         recent=set()
@@ -18,15 +18,17 @@ class Recommender:
             item=self.catalog.items.get(event['album_id'])
             if not item: continue
             age=max(0,(day-date.fromisoformat(event['listened_on'])).days)
-            strength=(event['rating']-3)*math.exp(-age/180)
+            rating=event['rating'] if type(event['rating']) is int else 3
+            strength=(rating-3)*math.exp(-age/180)
             for token,value in self.catalog.vectors[item['id']].items(): taste[token]+=value*strength
-            for genre in item['genres']: genre_ratings[genre].append(event['rating'])
+            for genre in item['genres']: genre_ratings[genre].append(rating)
             seen.add(item['id'])
             if age<30: recent.add(item['id'])
         norm=math.sqrt(sum(v*v for v in taste.values())) or 1
         taste={t:v/norm for t,v in taste.items()}
-        candidates=[a for a in self.catalog.items.values() if a['id'] not in recent]
-        if not candidates: candidates=list(self.catalog.items.values())
+        allowed=[a for a in self.catalog.items.values() if a['id'] not in (excluded or set())]
+        candidates=[a for a in allowed if a['id'] not in recent]
+        if not candidates: candidates=allowed
         ranked=[]
         for album in candidates:
             affinity=self.catalog.similarity(taste,self.catalog.vectors[album['id']])
