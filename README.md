@@ -1,10 +1,10 @@
 # An Album a Day
 
-A personal listening library with daily album picks, explained recommendations, a listening queue, ratings, notes, and separate local profiles. The React and TypeScript client talks to a Flask API backed by SQLite and a JSON album catalog.
+A personal listening library with daily album picks, explained recommendations, a listening queue, ratings, notes, and separate local profiles. The React, TypeScript, and Tailwind CSS client talks to a Flask API backed by SQLite and a JSON album catalog.
 
 ## Run
 
-Requires Python 3.10 or newer and Node.js with npm.
+Requires Python 3.10 or newer and Node.js 22.12 or newer with npm.
 
 ```sh
 cd server
@@ -24,8 +24,14 @@ Albums heard in the last 30 days are excluded until the small catalog is exhaust
 
 ## Library and API
 
-Local profiles separate listening histories and queues. The main dashboard uses the default local profile; the listening desk switches profiles explicitly. Profile IDs are organizational labels and provide no access control.
+Local profiles separate listening histories and queues. One profile selection controls discovery, the daily pick, queue, journal, and analytics throughout the client. Profile IDs are organizational labels and provide no access control.
 
 `/api/albums` searches the catalog. `/api/recommendations` returns ranked explanations; `/api/today` persists the daily choice. `/api/listens` records ratings and notes and supports history pagination through a row ID cursor. `/api/queue` manages the queue, `/api/stats` summarizes listening, and `/api/export` exports profile data. Pass `profile` to choose a profile. Successful logging removes an album from its queue.
 
-`server/library` separates catalog vectors, ranking, storage, and API routes. `client/src/features/ListeningDesk.tsx` provides the profile, queue, recommendation, and export workflow. The service is intended for trusted local use. Catalog entries require unique IDs, titles, artists, genres, and a year. Removed catalog entries remain visible in listening history using their saved IDs.
+`server/library` separates catalog vectors, ranking, storage, and API routes. `client/src/state/LibraryProvider.tsx` coordinates profile state, cancellations, and optimistic queue updates. Lazy-loaded pages provide discovery, catalog filters, ordered queues, an editable paginated journal, insights, and profile management. The client is styled with Tailwind CSS 4 and includes an accessible album dialog, empty states, error recovery, and generated album artwork. The service is intended for trusted local use. Catalog entries require unique IDs, titles, artists, genres, and a year. Removed catalog entries remain visible in listening history using their saved IDs.
+
+## Client and journal extensions
+
+Queue order persists in SQLite. Reordering supplies the previous order and rejects concurrent changes before applying a new order transactionally. Journal entries support profile-scoped editing and deletion. `/api/insights` aggregates actual listening records for genres, artists, ratings, monthly activity, and a twelve-week calendar. UI journal search covers loaded pages; profile exports cover all stored entries.
+
+See [client architecture](docs/client-architecture.md) for screen behavior, API contracts, migration details, and current validation limits. Audio playback and streaming service integration are outside this application's scope.
