@@ -9,6 +9,13 @@ class Database:
         with self.session() as db:
             db.executescript('''
               CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,name TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS hidden_albums(profile_id TEXT NOT NULL REFERENCES profiles(id),album_id TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(profile_id,album_id));
+              CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY AUTOINCREMENT,profile_id TEXT NOT NULL REFERENCES profiles(id),
+                name TEXT NOT NULL COLLATE NOCASE,description TEXT NOT NULL DEFAULT '',version INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(profile_id,name));
+              CREATE TABLE IF NOT EXISTS collection_items(collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+                album_id TEXT NOT NULL,position INTEGER NOT NULL,PRIMARY KEY(collection_id,album_id));
               INSERT OR IGNORE INTO profiles VALUES('local','My listening room');
               CREATE TABLE IF NOT EXISTS listens(album_id TEXT NOT NULL,listened_on TEXT NOT NULL DEFAULT CURRENT_DATE,
                 rating INTEGER CHECK(rating BETWEEN 1 AND 5),note TEXT NOT NULL DEFAULT '',profile_id TEXT NOT NULL DEFAULT 'local');
