@@ -3,6 +3,7 @@ import re
 from collections import Counter
 from datetime import date, timedelta
 from flask import Blueprint, jsonify, request
+from .extensions import hidden_ids, register_extensions
 
 def routes(database,catalog,recommender):
     api=Blueprint('library',__name__,url_prefix='/api')
@@ -42,16 +43,20 @@ def routes(database,catalog,recommender):
     @api.get('/recommendations')
     def recommendations():
         limit=bounded('limit',10,50)
-        with database.session() as db: history=events(db,profile(db))
-        return jsonify(recommender.rank(history,limit))
+        with database.session() as db:
+            key=profile(db);history=events(db,key);excluded=hidden_ids(db,key)
+        return jsonify(recommender.rank(history,limit,excluded=excluded))
     @api.get('/today')
     def today():
         with database.session() as db:
             db.execute('BEGIN IMMEDIATE'); key=profile(db); day=date.today().isoformat()
             saved=db.execute('SELECT * FROM daily_picks WHERE profile_id=? AND day=?',(key,day)).fetchone()
-            if saved and saved['album_id'] in catalog.items:
+            excluded=hidden_ids(db,key)
+            if saved and saved['album_id'] in catalog.items and saved['album_id'] not in excluded:
                 return jsonify({**catalog.items[saved['album_id']],'reasons':json.loads(saved['explanation'])})
-            pick=recommender.rank(events(db,key),1)[0]
+            picks=recommender.rank(events(db,key),1,excluded=excluded)
+            if not picks:return '',204
+            pick=picks[0]
             db.execute('INSERT OR REPLACE INTO daily_picks VALUES(?,?,?,?)',(key,day,pick['album']['id'],json.dumps(pick['reasons'])))
             return jsonify({**pick['album'],'reasons':pick['reasons']})
     @api.post('/listens')
@@ -70,17 +75,30 @@ def routes(database,catalog,recommender):
             return jsonify(status='saved',listen_id=cur.lastrowid),201
     @api.get('/listens')
     def history():
-        limit=bounded('limit',100,500)
-        before=bounded('before',2**63-1,2**63-1)
+        limit=bounded('limit',100,500);before=bounded('before',2**63-1,2**63-1)
+        query=request.args.get('q','').casefold().strip();month=request.args.get('month','');rating=request.args.get('rating','')
+        if len(query)>200:raise ValueError('Search must be at most 200 characters.')
+        conditions=['profile_id=?','rowid<?'];parameters=[]
+        if rating:
+            try:rating=int(rating)
+            except ValueError:raise ValueError('Rating must be 1 to 5.')
+            if not 1<=rating<=5:raise ValueError('Rating must be 1 to 5.')
+            conditions.append('rating=?');parameters.append(rating)
+        if month:
+            if not re.fullmatch(r'\d{4}-\d{2}',month):raise ValueError('Month must use YYYY-MM.')
+            start=date.fromisoformat(month+'-01');end=date(start.year+1,1,1) if start.month==12 else date(start.year,start.month+1,1)
+            conditions.extend(['listened_on>=?','listened_on<?']);parameters.extend([start.isoformat(),end.isoformat()])
+        result=[]
         with database.session() as db:
             key=profile(db)
-            rows=db.execute('SELECT rowid AS listen_id,* FROM listens WHERE profile_id=? AND rowid<? ORDER BY rowid DESC LIMIT ?',(key,before,limit)).fetchall()
-        result=[]
-        for row in rows:
-            album=catalog.items.get(row['album_id'],{'id':row['album_id'],'title':'Removed from catalog','artist':'','genres':[],'year':0})
-            result.append({**album,**dict(row)})
-        response=jsonify(result)
-        if rows: response.headers['X-Next-Cursor']=str(rows[-1]['listen_id'])
+            rows=db.execute('SELECT rowid AS listen_id,* FROM listens WHERE '+' AND '.join(conditions)+' ORDER BY rowid DESC',[key,before,*parameters])
+            for row in rows:
+                album=catalog.items.get(row['album_id'],{'id':row['album_id'],'title':'Removed from catalog','artist':'','genres':[],'year':0})
+                if query and query not in ' '.join([album['title'],album['artist'],row['note']]).casefold():continue
+                result.append({**album,**dict(row)})
+                if len(result)>limit:break
+        response=jsonify(result[:limit])
+        if len(result)>limit:response.headers['X-Next-Cursor']=str(result[limit-1]['listen_id'])
         return response
     @api.get('/stats')
     def stats():
@@ -111,7 +129,9 @@ def routes(database,catalog,recommender):
         with database.session() as db:
             key=profile(db)
             data={'version':1,'profile':key,'listens':[dict(r) for r in db.execute('SELECT * FROM listens WHERE profile_id=?',(key,))],
-                  'queue':[dict(r) for r in db.execute('SELECT * FROM queue WHERE profile_id=?',(key,))]}
+                  'queue':[dict(r) for r in db.execute('SELECT * FROM queue WHERE profile_id=? ORDER BY position,added_at,album_id',(key,))],
+                  'hidden_albums':[dict(r) for r in db.execute('SELECT * FROM hidden_albums WHERE profile_id=?',(key,))],
+                  'collections':[{**dict(row),'album_ids':[r['album_id'] for r in db.execute('SELECT album_id FROM collection_items WHERE collection_id=? ORDER BY position',(row['id'],))]} for row in db.execute('SELECT * FROM collections WHERE profile_id=?',(key,))]}
         response=jsonify(data);response.headers['Content-Disposition']='attachment; filename="listening-export.json"';return response
     @api.put('/queue/order')
     def reorder_queue():
@@ -162,4 +182,5 @@ def routes(database,catalog,recommender):
         return jsonify(total=total,unique_albums=len(unique),genres=[{'name':name,'count':count} for name,count in genres.most_common(12)],
             artists=[{'name':name,'count':count} for name,count in artists.most_common(8)],ratings=[{'rating':r,'count':ratings[r]} for r in range(1,6)],
             months=[{'month':month,'count':count} for month,count in sorted(months.items())[-12:]],calendar=calendar)
+    register_extensions(api,database,catalog)
     return api
