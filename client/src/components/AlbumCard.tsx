@@ -10,5 +10,6 @@ export function AlbumCard({ album, onSelect, reasons }: { album: Album; onSelect
     <div className="mt-3 flex flex-wrap gap-1.5">{album.genres.slice(0, 3).map(genre => <span className="tag" key={genre}>{genre}</span>)}</div>
     {reasons?.length ? <p className="mt-4 border-t border-stone-100 pt-3 text-xs leading-5 text-stone-500">{reasons.slice(0, 2).join(' · ')}</p> : null}
     <div className="mt-4 flex items-center justify-between gap-2"><button className="button-secondary text-xs!" disabled={busy} aria-pressed={queued} onClick={queue}>{queued ? 'Queued ✓' : '+ Listen next'}</button><button className="text-xs font-semibold text-emerald-900 hover:underline" onClick={() => onSelect(album)}>Log a listen ↗</button></div>
+    {reasons && <button className="mt-3 text-[10px] text-stone-400 hover:text-stone-700" disabled={busy} onClick={() => { void mutate('Hidden from future suggestions. Restore it in Listening Rooms.', profile => api.hide(profile, album.id)); }}>Hide from suggestions</button>}
   </article>;
 }
