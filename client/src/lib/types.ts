@@ -15,4 +15,7 @@ export interface Insights {
 }
 export interface ListenInput { album_id: string; rating: number; note: string; listened_on: string }
 export interface HistoryPage { entries: Listen[]; cursor: string | null }
-export type Page = 'discover' | 'catalog' | 'queue' | 'journal' | 'insights' | 'profiles';
+export interface Collection { id: number; name: string; description: string; version: number; albums: Album[]; updated_at: string }
+export interface HiddenAlbum extends Album { hidden_at: string }
+export interface HistoryFilters { query: string; rating: number; month: string }
+export type Page = 'collections' | 'discover' | 'catalog' | 'queue' | 'journal' | 'insights' | 'profiles';

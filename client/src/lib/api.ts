@@ -1,4 +1,4 @@
-import type { Album, DailyPick, HistoryPage, Insights, Listen, ListenInput, Profile, QueueAlbum, Recommendation, Stats } from './types';
+import type { Album, DailyPick, HistoryPage, Insights, Listen, ListenInput, Profile, QueueAlbum, Recommendation, Stats, Collection, HiddenAlbum, HistoryFilters } from './types';
 export class APIError extends Error { constructor(message: string, public status: number) { super(message); } }
 interface Options extends RequestInit { profile?: string; query?: Record<string, string> }
 async function request(path: string, { profile, query = {}, signal, ...init }: Options = {}): Promise<{ response: Response; data: unknown }> {
@@ -22,7 +22,7 @@ export const api = {
   profiles: (signal?: AbortSignal) => json<Profile[]>('/profiles', { signal }),
   createProfile: (id: string, name: string) => json<Profile>('/profiles', { method: 'POST', body: JSON.stringify({ id, name }) }),
   catalog: (signal?: AbortSignal) => json<Album[]>('/albums', { signal }),
-  today: (profile: string, signal?: AbortSignal) => json<DailyPick>('/today', { profile, signal }),
+  today: (profile: string, signal?: AbortSignal) => json<DailyPick | undefined>('/today', { profile, signal }).then(value => value ?? null),
   recommendations: (profile: string, signal?: AbortSignal) => json<Recommendation[]>('/recommendations', { profile, signal, query: { limit: '12' } }),
   queue: (profile: string, signal?: AbortSignal) => json<QueueAlbum[]>('/queue', { profile, signal }),
   enqueue: (profile: string, album_id: string) => json<void>('/queue', { profile, method: 'POST', body: JSON.stringify({ album_id }) }),
@@ -33,9 +33,15 @@ export const api = {
   log: (profile: string, value: ListenInput) => json<void>('/listens', { profile, method: 'POST', body: JSON.stringify(value) }),
   edit: (profile: string, id: number, value: Omit<ListenInput, 'album_id'>) => json<void>(`/listens/${id}`, { profile, method: 'PATCH', body: JSON.stringify(value) }),
   remove: (profile: string, id: number) => json<void>(`/listens/${id}`, { profile, method: 'DELETE' }),
-  async history(profile: string, before?: string, signal?: AbortSignal): Promise<HistoryPage> {
-    const { response, data } = await request('/listens', { profile, signal, query: { limit: '30', ...(before ? { before } : {}) } });
-    const entries = data as Listen[]; return { entries, cursor: entries.length === 30 ? response.headers.get('X-Next-Cursor') : null };
+  async history(profile: string, before?: string, signal?: AbortSignal, filters?: HistoryFilters): Promise<HistoryPage> {
+    const { response, data } = await request('/listens', { profile, signal, query: { limit: '30', ...(before ? { before } : {}), ...(filters?.query ? { q: filters.query } : {}), ...(filters?.rating ? { rating: String(filters.rating) } : {}), ...(filters?.month ? { month: filters.month } : {}) } });
+    const entries = data as Listen[]; return { entries, cursor: response.headers.get('X-Next-Cursor') };
   },
+  hidden: (profile: string, signal?: AbortSignal) => json<HiddenAlbum[]>('/feedback/hidden', { profile, signal }),
+  hide: (profile: string, album_id: string) => json<void>('/feedback/hidden', { profile, method: 'POST', body: JSON.stringify({ album_id }) }),
+  restore: (profile: string, id: string) => json<void>(`/feedback/hidden/${encodeURIComponent(id)}`, { profile, method: 'DELETE' }),
+  collections: (profile: string, signal?: AbortSignal) => json<Collection[]>('/collections', { profile, signal }),
+  saveCollection: (profile: string, value: { name: string; description: string; album_ids: string[] }, existing?: Pick<Collection, 'id' | 'version'>) => json<{ id: number; version: number }>(`/collections${existing ? '/' + existing.id : ''}`, { profile, method: existing ? 'PUT' : 'POST', body: JSON.stringify({ ...value, ...(existing ? { version: existing.version } : {}) }) }),
+  deleteCollection: (profile: string, id: number) => json<void>(`/collections/${id}`, { profile, method: 'DELETE' }),
   exportURL: (profile: string) => `/api/export?profile=${encodeURIComponent(profile)}`,
 };

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
 import type { Album, DailyPick, Profile, QueueAlbum, Recommendation, Stats } from '../lib/types';
-interface Snapshot { profile: string; profiles: Profile[]; catalog: Album[]; today: DailyPick; picks: Recommendation[]; queue: QueueAlbum[]; stats: Stats }
+interface Snapshot { profile: string; profiles: Profile[]; catalog: Album[]; today: DailyPick | null; picks: Recommendation[]; queue: QueueAlbum[]; stats: Stats }
 interface Library {
   profile: string; selectProfile(id: string): void; data: Snapshot | null; loading: boolean; error: string; notice: string; busy: boolean; revision: number;
   refresh(): void; mutate(label: string, task: (profile: string) => Promise<unknown>, optimistic?: (state: Snapshot) => Snapshot): Promise<boolean>;
@@ -34,7 +34,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       await task(owner);
       if (owner === profileRef.current) { setNotice(label); refresh(); }
-      return true;
+      return owner === profileRef.current;
     } catch (e) {
       if (owner === profileRef.current) { setMutationError(e instanceof Error ? e.message : String(e)); refresh(); }
       return false;
