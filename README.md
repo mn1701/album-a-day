@@ -1,6 +1,6 @@
 # An Album a Day
 
-A personal listening library with daily album picks, explained recommendations, a listening queue, ratings, notes, and separate local profiles. The React, TypeScript, and Tailwind CSS client talks to a Flask API backed by SQLite and a JSON album catalog.
+A personal listening library with daily album picks, explained recommendations, an ordered listening queue, album collections, ratings, notes, reversible discovery feedback, and separate local profiles. The React, TypeScript, and Tailwind CSS client talks to a Flask API backed by SQLite and a JSON album catalog.
 
 ## Run
 
@@ -20,7 +20,7 @@ Run `npm install` and `npm run dev` in `client` in another terminal. The API lis
 
 The content model builds normalized TF-IDF vectors from weighted genres, artist identity, and decade. Ratings form a preference vector with a 180 day decay. Candidate scoring includes unseen-album novelty and a stable daily tiebreaker. Greedy selection penalizes similarity to albums already chosen, and explanations identify matched genres or exploration choices.
 
-Albums heard in the last 30 days are excluded until the small catalog is exhausted. A daily pick is stored per profile and date so recording a new rating does not change that day's selection. The included six-album catalog is deliberately small; expand it to make ranking and diversity more useful. `python scripts/inspect_catalog.py albums.json --album a1` prints content neighbors for inspecting the catalog model.
+Albums heard in the last 30 days are excluded until the small catalog is exhausted. A daily pick is stored per profile and date so recording a new rating does not change that day's selection. Explicitly hidden albums are excluded; hiding the entire catalog produces an empty daily-pick state until albums are restored. The included six-album catalog is deliberately small; expand it to make ranking and diversity more useful. `python scripts/inspect_catalog.py albums.json --album a1` prints content neighbors for inspecting the catalog model.
 
 ## Library and API
 
@@ -32,6 +32,8 @@ Local profiles separate listening histories and queues. One profile selection co
 
 ## Client and journal extensions
 
-Queue order persists in SQLite. Reordering supplies the previous order and rejects concurrent changes before applying a new order transactionally. Journal entries support profile-scoped editing and deletion. `/api/insights` aggregates actual listening records for genres, artists, ratings, monthly activity, and a twelve-week calendar. UI journal search covers loaded pages; profile exports cover all stored entries.
+Queue order persists in SQLite. Reordering supplies the previous order and rejects concurrent changes before applying a new order transactionally. Journal entries support profile-scoped editing and deletion. `/api/insights` aggregates actual listening records for genres, artists, ratings, monthly activity, and a twelve-week calendar. Journal search covers the full profile log before pagination, with rating and month filters. Profile exports cover all stored entries, collections, queue order, and hidden-album feedback.
 
 See [client architecture](docs/client-architecture.md) for screen behavior, API contracts, migration details, and current validation limits. Audio playback and streaming service integration are outside this application's scope.
+
+Collections use per-profile names and optimistic versions to protect concurrent edits. Recommendation hiding is reversible from Listening Rooms and does not remove albums from the catalog or journal. `/api/collections` and `/api/feedback/hidden` provide the corresponding profile-scoped endpoints.
