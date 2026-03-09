@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Page } from '../lib/types';
 import { useLibrary } from '../state/LibraryProvider';
 const links: { id: Page; label: string; icon: string }[] = [
-  { id: 'discover', label: 'Discover', icon: '◉' }, { id: 'catalog', label: 'Album catalog', icon: '▤' }, { id: 'queue', label: 'Listen next', icon: '≋' }, { id: 'journal', label: 'Listening journal', icon: '◷' }, { id: 'insights', label: 'Your patterns', icon: '▥' }, { id: 'profiles', label: 'Listening rooms', icon: '◎' },
+  { id: 'collections', label: 'Album collections', icon: '▦' }, { id: 'discover', label: 'Discover', icon: '◉' }, { id: 'catalog', label: 'Album catalog', icon: '▤' }, { id: 'queue', label: 'Listen next', icon: '≋' }, { id: 'journal', label: 'Listening journal', icon: '◷' }, { id: 'insights', label: 'Your patterns', icon: '▥' }, { id: 'profiles', label: 'Listening rooms', icon: '◎' },
 ];
 export function Layout({ page, navigate, children }: { page: Page; navigate(page: Page): void; children: ReactNode }) {
   const { profile, selectProfile, data, loading, error, notice, refresh } = useLibrary();
